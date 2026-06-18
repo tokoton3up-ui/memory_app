@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>モード選択</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 30px;
+  background: #f3f5e9;
+}
+
+h2 {
+  margin-bottom: 30px;
+}
+
+.mode-btn {
+  width: 80%;
+  margin: 15px auto;
+  padding: 18px 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  font-size: 18px;
+  user-select: none;
+}
+
+.mode-btn:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<h2>学習モードを選んでください</h2>
+
+<div class="mode-btn" onclick="goMode('card.html')">カードモード</div>
+<div class="mode-btn" onclick="goMode('spell.html')">スペルモード</div>
+
+<script>
+function goMode(page) {
+    // index.html で localStorage に保存済みの data をそのまま使う
+    window.location.href = page;
+}
+</script>
+
+</body>
+</html>
