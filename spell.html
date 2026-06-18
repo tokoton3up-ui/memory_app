@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>スペルモード</title>
+  <style>
+    /* 全体レイアウト（スマホ中心） */
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f2f2f2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 上部の × ボタン */
+.close-btn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  font-size: 2.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1000;
+}
+
+/* 上部のリセットボタン（復習モード用） */
+.reset-btn {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  font-size: 2rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1000;
+}
+
+/* 問題カード */
+.card {
+  width: 90%;
+  max-width: 500px;
+  min-height: 35vh;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 20px;
+  margin-top: 70px; /* 上のボタンと重ならないように */
+  font-size: 1.2rem;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+/* 入力欄（スペル入力） */
+input[type="text"] {
+  width: 90%;
+  max-width: 500px;
+  padding: 12px;
+  font-size: 1.3rem;
+  margin-top: 20px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* 決定ボタン */
+.answer-btn {
+  width: 90%;
+  max-width: 500px;
+  background: #2196F3;
+  color: white;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.4rem;
+  margin-top: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 正解マーク（〇） */
+.correct-mark {
+  font-size: 3rem;
+  color: red;
+  font-weight: 700;
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* カード番号（1/10） */
+.counter {
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #555;
+}
+
+/* スマホ向け微調整 */
+@media (max-width: 480px) {
+  .card {
+    font-size: 1.1rem;
+    padding: 15px;
+  }
+  input[type="text"] {
+    font-size: 1.2rem;
+  }
+  .answer-btn {
+    font-size: 1.2rem;
+  }
+}
+
+  </style>
+</head>
+
+<body>
+
+  <!-- スペルモード本体 -->
+  <div id="spell" class="screen">
+
+    <div id="spell-exit" class="close-button">×</div>
+
+    <!-- ★ 説明文（question） -->
+    <div id="spell-question" class="spell-question"></div>
+
+    <!-- ★ 進捗表示 -->
+    <div id="spell-progress" class="spell-progress"></div>
+
+    <!-- ★ 入力欄（答え） -->
+    <input id="spell-input" class="spell-input" type="text" autocomplete="off" />
+
+    <!-- ★ 正解時の赤い〇 -->
+<div id="spell-correct-mark" style="font-size: 40pt; color: red; text-align: center; margin-top: 10px;"></div>
+
+    <!-- 不正解オーバーレイ -->
+    <div id="spell-wrong-overlay" class="spell-overlay hidden">
+      <div class="spell-wrong-x">×</div>
+      <div id="spell-correct-card" class="spell-correct-card"></div>
+    </div>
+
+  </div>
+
+  <!-- 結果画面 -->
+  <div id="spell-result" class="screen hidden"></div>
+
+<script>
+/* ===== CSVデータを取得 ===== */
+let words = JSON.parse(localStorage.getItem("data") || "[]");
+
+/* ===== 状態管理 ===== */
+let currentIndex = 0;
+let wrongList = [];
+let reviewMode = false;
+let reviewIndex = 0;
+
+/* ===== 要素 ===== */
+const spellScreen = document.getElementById("spell");
+const spellQuestion = document.getElementById("spell-question");
+const spellProgress = document.getElementById("spell-progress");
+const spellInput = document.getElementById("spell-input");
+
+const overlay = document.getElementById("spell-wrong-overlay");
+const correctCard = document.getElementById("spell-correct-card");
+
+const resultScreen = document.getElementById("spell-result");
+
+/* ===== 閉じる ===== */
+document.getElementById("spell-exit").onclick = () => {
+  location.href = "mode-select.html";
+};
+
+/* ===== 進捗表示 ===== */
+function updateProgress() {
+  if (reviewMode) {
+    spellProgress.textContent = `${reviewIndex + 1} / ${wrongList.length}`;
+  } else {
+    spellProgress.textContent = `${currentIndex + 1} / ${words.length}`;
+  }
+}
+
+/* ===== スペルモード開始 ===== */
+startSpell();
+
+function startSpell() {
+  currentIndex = 0;
+  wrongList = [];
+  reviewMode = false;
+  reviewIndex = 0;
+  showQuestion();
+}
+
+/* ===== 問題表示 ===== */
+function showQuestion() {
+  const item = reviewMode ? wrongList[reviewIndex] : words[currentIndex];
+
+  spellQuestion.textContent = item.question;
+  spellInput.value = "";
+  spellInput.focus();
+  updateProgress();
+}
+
+/* ===== 入力判定 ===== */
+spellInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") checkAnswer();
+});
+
+function checkAnswer() {
+  const item = reviewMode ? wrongList[reviewIndex] : words[currentIndex];
+  const user = spellInput.value.trim();
+  const correct = item.answer.trim();
+
+  if (user === correct) {
+    document.getElementById("spell-correct-mark").textContent = "〇";  // ← ここ！
+    setTimeout(nextQuestion, 500);
+  } else {
+    document.getElementById("spell-correct-mark").textContent = "";   // ← ここ！
+    wrongList.push(item);
+
+    correctCard.textContent = item.answer;
+    overlay.classList.remove("hidden");
+
+    overlay.onclick = () => {
+      overlay.classList.add("hidden");
+      overlay.onclick = null;
+      nextQuestion();
+    };
+  }
+}
+
+/* ===== 次の問題へ ===== */
+function nextQuestion() {
+
+document.getElementById("spell-correct-mark").textContent = "";  // ← ここ！
+
+  if (reviewMode) {
+    reviewIndex++;
+    if (reviewIndex >= wrongList.length) {
+      finishReview();
+      return;
+    }
+    showQuestion();
+    return;
+  }
+
+  currentIndex++;
+  if (currentIndex >= words.length) {
+    finishSpell();
+    return;
+  }
+
+  showQuestion();
+}
+
+/* ===== 通常モード終了 ===== */
+function finishSpell() {
+  spellScreen.classList.add("hidden");
+  resultScreen.classList.remove("hidden");
+
+  resultScreen.innerHTML = `
+    <div class="result-text">${words.length - wrongList.length}/${words.length}</div>
+    ${
+      wrongList.length > 0
+        ? `<button id="btn-review" class="result-button">復習する</button>`
+        : `<button id="btn-back" class="result-button">モード選択へ</button>`
+    }
+  `;
+
+  if (wrongList.length > 0) {
+    document.getElementById("btn-review").onclick = () => {
+      reviewMode = true;
+      reviewIndex = 0;
+      resultScreen.classList.add("hidden");
+      spellScreen.classList.remove("hidden");
+      showQuestion();
+    };
+  } else {
+    document.getElementById("btn-back").onclick = () => {
+      location.href = "mode-select.html";
+    };
+  }
+}
+
+/* ===== 復習終了 ===== */
+function finishReview() {
+  resultScreen.classList.remove("hidden");
+  spellScreen.classList.add("hidden");
+
+  resultScreen.innerHTML = `
+    <div class="result-text">復習完了</div>
+    <button id="btn-back" class="result-button">モード選択へ</button>
+  `;
+
+  document.getElementById("btn-back").onclick = () => {
+    location.href = "mode-select.html";
+  };
+}
+</script>
+
+</body>
+</html>
