@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>モード選択 - 暗記アプリ</title>
+<style>
+  body { font-family: sans-serif; padding: 24px; max-width:720px; margin:auto; text-align:center; }
+  h1 { margin-bottom:8px; }
+  .info { color:#666; margin-bottom:18px; }
+  .mode { display:flex; gap:12px; justify-content:center; margin-top:18px; }
+  .btn { padding:14px 22px; border-radius:10px; background:#2b8aef; color:#fff; border:0; cursor:pointer; font-size:16px; }
+  .btn.secondary { background:#fff; color:#333; border:1px solid #ddd; }
+  .meta { margin-top:18px; text-align:left; background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+  .small { font-size:13px; color:#666; margin-top:10px; }
+</style>
+</head>
+<body>
+
+<h1>学習モードを選んでください</h1>
+<div id="materialName" class="info">読み込み中...</div>
+
+<div class="mode">
+  <button class="btn" id="cardBtn">カードモード</button>
+  <button class="btn secondary" id="spellBtn">スペルモード</button>
+</div>
+
+<div class="meta" id="metaBox" style="display:none;">
+  <div><strong>教材</strong> <span id="metaTitle"></span></div>
+  <div class="small" id="metaCount"></div>
+</div>
+
+<div style="margin-top:22px;">
+  <button onclick="goBack()" class="btn secondary">教材一覧に戻る</button>
+</div>
+
+<script>
+const CURRENT_MATERIAL_KEY = "current_material";
+const DATA_PREFIX = "material_data_";
+const PROGRESS_PREFIX = "progress_";
+
+function loadCurrent() {
+  try {
+    return JSON.parse(localStorage.getItem(CURRENT_MATERIAL_KEY) || "null");
+  } catch(e) { return null; }
+}
+function goBack() { window.location.href = "index.html"; }
+
+function init() {
+  const cur = loadCurrent();
+  if (!cur) {
+    document.getElementById("materialName").textContent = "教材が選択されていません";
+    return;
+  }
+  document.getElementById("materialName").textContent = cur.name;
+  const id = cur.id;
+  const data = JSON.parse(localStorage.getItem(DATA_PREFIX + id) || "null");
+  if (data && Array.isArray(data)) {
+    document.getElementById("metaBox").style.display = "block";
+    document.getElementById("metaTitle").textContent = cur.name;
+    document.getElementById("metaCount").textContent = `問題数: ${data.length} 件`;
+  } else {
+    document.getElementById("metaBox").style.display = "none";
+  }
+
+  document.getElementById("cardBtn").addEventListener("click", () => {
+    // card.html に遷移（card.html 側で DATA_PREFIX+id を読み込む想定）
+    window.location.href = "card.html";
+  });
+  document.getElementById("spellBtn").addEventListener("click", () => {
+    window.location.href = "spell.html";
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
