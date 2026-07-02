@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>モード選択 - 暗記アプリ</title>
+<style>
+  body{font-family:sans-serif;padding:24px;max-width:720px;margin:auto;text-align:center}
+  h1{margin-bottom:8px}
+  .info{color:#666;margin-bottom:18px}
+  .mode{display:flex;gap:12px;justify-content:center;margin-top:18px}
+  .btn{padding:14px 22px;border-radius:10px;background:#2b8aef;color:#fff;border:0;cursor:pointer;font-size:16px}
+  .btn.secondary{background:#fff;color:#333;border:1px solid #ddd}
+  .meta{margin-top:18px;text-align:left;background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+  .small{font-size:13px;color:#666;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>学習モードを選んでください</h1>
+<div id="materialName" class="info">読み込み中...</div>
+
+<div class="mode">
+  <button class="btn" id="cardBtn">カードモード</button>
+  <button class="btn secondary" id="spellBtn">スペルモード</button>
+</div>
+
+<div class="meta" id="metaBox" style="display:none;">
+  <div><strong>教材</strong> <span id="metaTitle"></span></div>
+  <div class="small" id="metaCount"></div>
+</div>
+
+<div style="margin-top:22px;">
+  <button onclick="goBack()" class="btn secondary">教材一覧に戻る</button>
+</div>
+
+<script>
+/* URL パラメータ取得 */
+function getParam(name){ return new URLSearchParams(location.search).get(name); }
+function materialIdFromUrl(url){ try{ return btoa(unescape(encodeURIComponent(url))).replace(/=+$/,""); }catch(e){ return encodeURIComponent(url).replace(/[^a-zA-Z0-9]/g,'_'); } }
+
+const url = getParam('url');
+const startIndex = Number(getParam('startIndex') || -1);
+const materialNameEl = document.getElementById('materialName');
+const metaBox = document.getElementById('metaBox');
+const metaTitle = document.getElementById('metaTitle');
+const metaCount = document.getElementById('metaCount');
+
+if (!url){
+  materialNameEl.textContent = '教材が選択されていません';
+} else {
+  // 表示はファイル名（URL末尾）
+  const fileName = decodeURIComponent(url.split('/').pop() || url);
+  materialNameEl.textContent = fileName;
+  metaTitle.textContent = fileName;
+  // fetch して件数だけ取得（保存はしない）
+  (async ()=>{
+    try{
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(res.status);
+      const text = await res.text();
+      // 簡易パース：行数-1 を件数とする
+      const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim()!=="");
+      const count = Math.max(0, lines.length - 1);
+      metaCount.textContent = `問題数: ${count} 件`;
+      metaBox.style.display = 'block';
+    }catch(e){
+      metaBox.style.display = 'none';
+    }
+  })();
+}
+
+/* ボタン挙動：startIndex を引き継ぐ */
+document.getElementById('cardBtn').addEventListener('click', ()=> {
+  const params = `url=${encodeURIComponent(url)}${startIndex>=0?`&startIndex=${startIndex}`:''}`;
+  location.href = `card.html?${params}`;
+});
+document.getElementById('spellBtn').addEventListener('click', ()=> {
+  const params = `url=${encodeURIComponent(url)}${startIndex>=0?`&startIndex=${startIndex}`:''}`;
+  location.href = `spell.html?${params}`;
+});
+
+function goBack(){
+  // 戻るは index に戻す（startIndex を渡さない）
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>
